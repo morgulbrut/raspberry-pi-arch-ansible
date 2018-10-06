@@ -1,18 +1,60 @@
 ---
-- hosts: raspberry-pi
-  remote_user: root
+- hosts: merkur 
+  become: yes
+  become_user: root
   tasks:
-  - name: install sudo
-    pacman: name=sudo state=installed
-  - name: install zsh
-    pacman: name=zsh state=installed
-  - name: configure sudo
-    lineinfile: dest=/etc/sudoers regexp="keith ALL" line="keith ALL=(ALL) ALL" state=present validate='visudo -cf %s'
-  - name: Add keith user
-    user: name=keith groups=users shell=/usr/bin/zsh 
-  - name: Give keith his authorized keys file
-    authorized_key: user=keith key="{{ lookup('file', '/home/keith/.ssh/id_rsa.pub') }}"
-  - name: Remove ability for root user to login over ssh
-    lineinfile: dest=/etc/ssh/sshd_config regexp="^#PasswordAuthentication" insertafter="^#PasswordAuthentication" line="PasswordAuthentication no"
+    - name: install sudo
+      pacman:
+        name: sudo
+        state: installed
 
-    
+    - name: install zsh
+      pacman:
+        name: zsh
+        state: installed
+  
+    - name: configure sudo
+      lineinfile:
+        path: /etc/sudoers
+        regexp: "stahl ALL"
+        line: "stahl ALL=(ALL) ALL"
+        state: present
+        validate: 'visudo -cf %s'
+  
+    - name: Add stahl user
+      user:
+        name: stahl
+        groups: users,wheel,audio
+        shell: /usr/bin/zsh 
+  
+    - name: Give stahl his authorized keys file
+      authorized_key:
+        user: stahl
+        key: "{{ lookup('file', '/home/stahl/.ssh/id_rsa.pub') }}"
+  
+    - name: Remove ability for root user to login over ssh
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication.*no'
+        line: 'PasswordAuthentication no'
+      notify: Reload sshd
+  
+    - name: Remove alarm user
+      user:
+        name: alarm
+        state: absent
+        remove: yes
+  
+    - name: Enable lingering for stahl user
+      command: loginctl enable-linger stahl
+  
+    - name: Full system upgrade
+      pacman:
+        update_cache: yes
+        upgrade: yes
+  
+  handlers:
+    - name: Reload sshd
+      systemd:
+        name: sshd 
+        state: reloaded

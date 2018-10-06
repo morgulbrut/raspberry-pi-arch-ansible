@@ -1,14 +1,100 @@
 ---
-- hosts: raspberry-pi
-  sudo: yes
+- hosts: merkur
+  become: yes
   tasks:
-    - name: Full system upgrade
-      command: pacman -Syu --noconfirm
+    
+    - name: Install git
+      pacman:
+        name: ['git']
+        state: installed
+        update_cache: yes
+      tags: packages
+
+    - name: Get oh-my-zsh (assumes zsh is installed)
+      git:
+          repo: 'https://github.com/robbyrussell/oh-my-zsh'
+          dest: /home/stahl/.oh-my-zsh
+      become: yes
+      become_user: stahl
+
+    - name: Clone dotfiles
+      git:
+          repo: 'https://github.com/stahlnow/dotfiles.git'
+          dest: /home/stahl/.dotfiles
+          version: merkur
+      become: yes
+      become_user: stahl
+      tags: dotfiles
+
+    - name: Install dotfiles
+      shell: /home/stahl/.dotfiles/install
+      become: yes
+      become_user: stahl
+      tags: dotfiles
+    
+    - name: Install packages
+      pacman:
+        name: ['base-devel', 'ntfs-3g', 'mpd', 'git', 'alsa-utils', 'transmission-cli', 'omxplayer', 'ttf-freefont']
+        state: installed
+        update_cache: yes
+      tags: packages
+
     - name: Install vim
-      pacman: name=gvim state=installed update_cache=yes
-    - name: Install system-wide python modules
-      pacman: name={{ item }} state=installed
-      with_items:
-        - python2-pip
-        - python2-virtualenv
-        - python-virtualenvwrapper
+      pacman:
+        name: 'vim'
+        state: installed
+        update_cache: yes
+      tags: vim
+
+    - name: Setup vim backup dir
+      file:
+         path: /home/stahl/.vim/backup
+         state: directory
+         owner: stahl
+         group: users
+      tags: vim
+
+    - name: Setup vim swp dir
+      file:
+         path: /home/stahl/.vim/swp
+         state: directory
+         owner: stahl 
+         group: users
+      tags: vim
+
+    - name: Setup Vundle 
+      git:
+        repo: "https://github.com/VundleVim/Vundle.vim.git"
+        dest: /home/stahl/.vim/bundle/Vundle.vim
+      become: yes
+      become_user: stahl
+      tags: vim
+
+    - name: Create transmission service dir
+      file: path=/etc/systemd/system/transmission.service.d state=directory
+      tags: transmission setup service
+
+    - name: Setup transmission service
+      template:
+          src: templates/username.conf.j2
+          dest: /etc/systemd/system/transmission.service.d/username.conf
+      tags: transmission setup service
+
+    - name: Enable and start transmission service
+      systemd:
+          name: transmission
+          state: started
+          enabled: yes
+          daemon_reload: yes
+      tags: transmission setup service
+
+    - name: Enable and start mpd service as user service
+      systemd:
+          name: mpd
+          state: started
+          enabled: yes
+          scope: user
+      become: yes
+      become_user: stahl
+      tags: mpd setup service
+
