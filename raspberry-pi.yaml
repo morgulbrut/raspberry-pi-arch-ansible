@@ -98,3 +98,19 @@
       become_user: stahl
       tags: mpd setup service
 
+    - name: Start transmission service
+      systemd:
+          name: transmission
+          state: started
+      tags: transmission start-service
+
+    - name: Start mpd service as user service
+      systemd:
+          name: mpd
+          state: started
+          scope: user
+      become: yes
+      become_user: stahl
+      tags: mpd start-service
+
+
