@@ -16,20 +16,20 @@
     - name: configure sudo
       lineinfile:
         path: /etc/sudoers
-        regexp: "stahl ALL"
-        line: "stahl ALL=(ALL) ALL"
+        regexp: "tillo ALL"
+        line: "tillo ALL=(ALL) ALL"
         state: present
         validate: 'visudo -cf %s'
   
     - name: Add stahl user
       user:
-        name: stahl
+        name: tillo
         groups: users,wheel,audio
         shell: /usr/bin/zsh 
   
     - name: Give stahl his authorized keys file
       authorized_key:
-        user: stahl
+        user: tillo
         key: "{{ lookup('file', '/home/stahl/.ssh/id_rsa.pub') }}"
   
     - name: Remove ability for root user to login over ssh
